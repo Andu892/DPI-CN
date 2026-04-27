@@ -100,30 +100,94 @@ Template producer-consumer queue using `std::mutex` + `std::condition_variable`.
 
 ## Sample Output
 
+### Multi-threaded with Blocking Rules Applied
+
 ```
-╔══════════════════════════════════════════════════════╗
-║          DPI ENGINE v2.0 (Multi-threaded)            ║
-╠══════════════════════════════════════════════════════╣
-║ Load Balancers: 2    FPs per LB: 2    Total FPs: 4   ║
-╚══════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════╗
+║              DPI ENGINE v2.0 (Multi-threaded)                 ║
+╠══════════════════════════════════════════════════════════════╣
+║ Load Balancers:  2    FPs per LB:  2    Total FPs:  4     ║
+╚══════════════════════════════════════════════════════════════╝
 
-Total Packets:    77        Forwarded: 69
-TCP Packets:      73        Dropped:    8
-UDP Packets:       4
+[Rules] Blocked IP: 192.168.1.50
+[Rules] Blocked app: YouTube
+[Rules] Blocked domain: tiktok
+Opened PCAP file: test_dpi.pcap
+  Version: 2.4
+  Snaplen: 65535 bytes
+  Link type: 1 (Ethernet)
+[Reader] Processing packets...
+[Reader] Done reading 77 packets
 
-APPLICATION BREAKDOWN
-  HTTPS       39   50.6%  ##########
-  Unknown     16   20.8%  ####
-  YouTube      4    5.2%  # (BLOCKED)
-  DNS          4    5.2%  #
-  Facebook     3    3.9%
+╔══════════════════════════════════════════════════════════════╗
+║                      PROCESSING REPORT                        ║
+╠══════════════════════════════════════════════════════════════╣
+║ Total Packets:                77                           ║
+║ Total Bytes:                5738                           ║
+║ TCP Packets:                  73                           ║
+║ UDP Packets:                   4                           ║
+╠══════════════════════════════════════════════════════════════╣
+║ Forwarded:                    70                           ║
+║ Dropped:                       7                           ║
+╠══════════════════════════════════════════════════════════════╣
+║ THREAD STATISTICS                                             ║
+║   LB0 dispatched:             53                           ║
+║   LB1 dispatched:             24                           ║
+║   FP0 processed:              53                           ║
+║   FP1 processed:               0                           ║
+║   FP2 processed:               0                           ║
+║   FP3 processed:              24                           ║
+╠══════════════════════════════════════════════════════════════╣
+║                   APPLICATION BREAKDOWN                       ║
+╠══════════════════════════════════════════════════════════════╣
+║ HTTPS                39  50.6% ##########            ║
+║ Unknown              16  20.8% ####                  ║
+║ DNS                   4   5.2% #                     ║
+║ Twitter/X             3   3.9%                       ║
+║ HTTP                  2   2.6%                       ║
+║ GitHub                1   1.3%                       ║
+║ Amazon                1   1.3%                       ║
+║ Instagram            1   1.3%                       ║
+║ Discord              1   1.3%                       ║
+║ Facebook             1   1.3%                       ║
+║ YouTube              1   1.3%                       ║
+║ Apple                1   1.3%                       ║
+║ Zoom                 1   1.3%                       ║
+║ Google               1   1.3%                       ║
+║ Telegram             1   1.3%                       ║
+║ TikTok               1   1.3%                       ║
+║ Spotify              1   1.3%                       ║
+║ Cloudflare           1   1.3%                       ║
+╚══════════════════════════════════════════════════════════════╝
 
-DETECTED SNIs
-  www.youtube.com   → YouTube  (BLOCKED)
-  www.facebook.com  → Facebook
-  www.google.com    → Google
-  github.com        → GitHub
+[Detected Domains/SNIs]
+  - example.com → HTTPS
+  - open.spotify.com → Spotify
+  - www.microsoft.com → Twitter/X
+  - github.com → GitHub
+  - www.facebook.com → Facebook
+  - zoom.us → Zoom
+  - httpbin.org → HTTPS
+  - www.youtube.com → YouTube (BLOCKED)
+  - www.instagram.com → Instagram
+  - discord.com → Discord
+  - web.telegram.org → Telegram
+  - www.apple.com → Apple
+  - twitter.com → Twitter/X
+  - www.google.com → Google
+  - www.amazon.com → Amazon
+  - www.cloudflare.com → Cloudflare
+  - www.netflix.com → Twitter/X
+  - www.tiktok.com → TikTok (BLOCKED)
+
+Output written to: output.pcap
 ```
+
+**Key Results:**
+- **Blocking Rules in Action**: 7 packets dropped by applied rules (YouTube app, domain tiktok, IP 192.168.1.50)
+- **Load Distribution**: LB0 dispatched 53 packets to FP0, LB1 dispatched 24 packets to FP3
+- **18 Unique Domains Extracted** via TLS SNI from encrypted connections
+- **15 Application Types Identified** including HTTPS, DNS, social media, and streaming services
 
 ---
 
@@ -143,20 +207,40 @@ g++ -std=c++17 -pthread -O2 -I include -o dpi_engine \
     src/packet_parser.cpp src/sni_extractor.cpp src/types.cpp
 ```
 
+**Demo script:**
+```bash
+./run-st-dpi
+```
+
 **Usage:**
 ```bash
-# Basic
-./dpi_engine input.pcap output.pcap
+# Single-threaded demo
+./run-st-dpi
 
-# With blocking rules
-./dpi_engine input.pcap output.pcap \
+# Single-threaded manual run
+./dpi_simple test_dpi.pcap output.pcap
+
+# Multi-threaded baseline
+./dpi_engine test_dpi.pcap output.pcap
+
+# With blocking rules (drops matching packets from output)
+./dpi_engine test_dpi.pcap output.pcap \
     --block-app YouTube \
     --block-ip 192.168.1.50 \
     --block-domain tiktok
 
-# Configure thread count
-./dpi_engine input.pcap output.pcap --lbs 4 --fps 4
+# Configure Load Balancer and Fast Path thread counts
+./dpi_engine test_dpi.pcap output.pcap --lbs 4 --fps 4
 ```
+
+**Blocking Rules Behavior:**
+- `--block-app YouTube` — Drops all flows classified as YouTube
+- `--block-ip 192.168.1.50` — Drops all packets from/to that IP
+- `--block-domain tiktok` — Drops flows matching domain SNI substring "tiktok"
+
+Dropped packets are NOT written to the output PCAP file.
+
+> Note: `output.pcap`, `dpi_simple`, and `dpi_engine` are generated artifacts and should not be committed to source control. They are ignored by `.gitignore`. 
 
 ---
 

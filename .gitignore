@@ -1,0 +1,15 @@
+# Build artifacts
+dpi_simple
+dpi_engine
+*.o
+*.obj
+*.gch
+
+# Generated output
+output.pcap
+
+# IDE / editor
+.vscode/
+
+# Local runtime files
+*.log

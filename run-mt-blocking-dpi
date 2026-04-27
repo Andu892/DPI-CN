@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [ ! -f dpi_engine ]; then
+  echo "Building multi-threaded demo binary..."
+  g++ -std=c++17 -pthread -O2 -I include -o dpi_engine \
+      src/dpi_mt.cpp src/pcap_reader.cpp src/packet_parser.cpp \
+      src/sni_extractor.cpp src/types.cpp
+fi
+
+echo "Running multi-threaded blocking demo with test_dpi.pcap -> output-mt-blocked.pcap"
+./dpi_engine test_dpi.pcap output-mt-blocked.pcap \
+    --block-app YouTube \
+    --block-ip 192.168.1.50 \
+    --block-domain tiktok

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
+
+if [ ! -f dpi_simple ]; then
+  echo "Building single-threaded demo binary..."
+  g++ -std=c++17 -O2 -I include -o dpi_simple \
+      src/main_working.cpp src/pcap_reader.cpp src/packet_parser.cpp \
+      src/sni_extractor.cpp src/types.cpp
+fi
+
+echo "Running single-threaded blocking demo with test_dpi.pcap -> output-st-blocked.pcap"
+./dpi_simple test_dpi.pcap output-st-blocked.pcap \
+    --block-app YouTube \
+    --block-ip 192.168.1.50 \
+    --block-domain tiktok
